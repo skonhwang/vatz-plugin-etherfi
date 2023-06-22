@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	pluginpb "github.com/dsrvlabs/vatz-proto/plugin/v1"
 	"github.com/dsrvlabs/vatz/sdk"
@@ -67,23 +68,22 @@ func query_gql() {
 			bidMap := bid.(map[string]interface{})
 			if idValue, ok := bidMap["id"]; ok {
 				fmt.Println("ID:", idValue)
+				path := fmt.Sprintf("../mnt/etherfi/sync_client_validator_keys/%s", idValue.(string))
+				_, errDir := os.Stat(path)
+				if os.IsNotExist(errDir) {
+					fmt.Println(idValue, " is new one")
+				} else {
+					fmt.Println(path, " is existed!")
+				}
 			} else {
 				fmt.Println("ID not found in bid")
 			}
 		}
 	}
-	/*
-		bytes, err := json.MarshalIndent(respData, "", "    ")
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println(string(bytes))
-	*/
 }
 
 func pluginFeature(info, option map[string]*structpb.Value) (sdk.CallResponse, error) {
 	// TODO: Fill here.
-	//	fmt.Println("asdfasdfasdf")
 	query_gql()
 	ret := sdk.CallResponse{
 		FuncName:   "etherfi_func",
