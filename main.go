@@ -3,12 +3,12 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"os"
 
 	pluginpb "github.com/dsrvlabs/vatz-proto/plugin/v1"
 	"github.com/dsrvlabs/vatz/sdk"
 	"github.com/machinebox/graphql"
+
 	"golang.org/x/net/context"
 	"google.golang.org/protobuf/types/known/structpb"
 )
@@ -34,6 +34,7 @@ func init() {
 }
 
 func main() {
+
 	p := sdk.NewPlugin(pluginName)
 	p.Register(pluginFeature)
 
@@ -43,7 +44,9 @@ func main() {
 	}
 }
 
-func query_gql() {
+func query_gql() (string, bool) {
+	var retString string
+	var retBool bool
 	// create a client (safe to share across requests)
 	client := graphql.NewClient("https://api.studio.thegraph.com/query/41778/etherfi-mainnet/0.0.3")
 
@@ -58,7 +61,7 @@ func query_gql() {
 	// run it and capture the response
 	var respData map[string]interface{}
 	if err := client.Run(context.Background(), req, &respData); err != nil {
-		log.Fatal(err)
+		fmt.Println("Error: ", err)
 	}
 	bids, ok := respData["bids"]
 	if !ok {
@@ -67,29 +70,48 @@ func query_gql() {
 		for _, bid := range bids.([]interface{}) {
 			bidMap := bid.(map[string]interface{})
 			if idValue, ok := bidMap["id"]; ok {
-				fmt.Println("ID:", idValue)
-				path := fmt.Sprintf("../mnt/etherfi/sync_client_validator_keys/%s", idValue.(string))
+				path := fmt.Sprintf("/Users/hwangseungkon/dsrv/2022/etherfi/sync-client-v2/etherfi-sync-clientv2/mnt/etherfi/sync_client_validator_keys/%s", idValue.(string))
 				_, errDir := os.Stat(path)
 				if os.IsNotExist(errDir) {
-					fmt.Println(idValue, " is new one")
+					retString += fmt.Sprintf("%s is new one\n", idValue.(string))
+					fmt.Println(retString)
+					retBool = true
 				} else {
-					fmt.Println(path, " is existed!")
+					logstr := fmt.Sprintf("%s is existed!\n", path)
+					fmt.Println(logstr)
+					retBool = false
 				}
 			} else {
-				fmt.Println("ID not found in bid")
+				retString = "ID not found in bid"
+				retBool = false
 			}
 		}
 	}
+
+	fmt.Println(retString)
+	return retString, retBool
 }
 
 func pluginFeature(info, option map[string]*structpb.Value) (sdk.CallResponse, error) {
+	severity := pluginpb.SEVERITY_INFO
+	state := pluginpb.STATE_NONE
 	// TODO: Fill here.
-	query_gql()
+	str, isNew := query_gql()
+	if isNew {
+		severity = pluginpb.SEVERITY_CRITICAL
+		state = pluginpb.STATE_SUCCESS
+		fmt.Println(str)
+	} else {
+		str = "There is no new one."
+		severity = pluginpb.SEVERITY_INFO
+		state = pluginpb.STATE_SUCCESS
+		fmt.Println(str)
+	}
 	ret := sdk.CallResponse{
 		FuncName:   "etherfi_func",
-		Message:    "YOUR_MESSAGE_CONTENTS",
-		Severity:   pluginpb.SEVERITY_UNKNOWN,
-		State:      pluginpb.STATE_NONE,
+		Message:    str,
+		Severity:   severity,
+		State:      state,
 		AlertTypes: []pluginpb.ALERT_TYPE{pluginpb.ALERT_TYPE_DISCORD},
 	}
 
