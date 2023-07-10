@@ -17,18 +17,24 @@ const (
 	// Default values.
 	defaultAddr = "127.0.0.1"
 	defaultPort = 9001
+	graphUrl    = "https://api.studio.thegraph.com/query/41778/etherfi-mainnet/0.0.3"
+	outputPath  = "/mnt/etherfi/sync_client_validator_keys/"
 
 	pluginName = "etherfi"
 )
 
 var (
-	addr string
-	port int
+	addr    string
+	port    int
+	gqlUrl  string
+	outPath string
 )
 
 func init() {
 	flag.StringVar(&addr, "addr", defaultAddr, "IP Address(e.g. 0.0.0.0, 127.0.0.1)")
 	flag.IntVar(&port, "port", defaultPort, "Port number, default 9091")
+	flag.StringVar(&gqlUrl, "graphURL", graphUrl, "Ex:https://api.studio.thegraph.com/query/41778/etherfi-mainnet/0.0.3")
+	flag.StringVar(&outPath, "output", outputPath, "Dirctory for downloading validator keys")
 
 	flag.Parse()
 }
@@ -48,7 +54,8 @@ func query_gql() (string, bool) {
 	var retString string
 	var retBool bool
 	// create a client (safe to share across requests)
-	client := graphql.NewClient("https://api.studio.thegraph.com/query/41778/etherfi-mainnet/0.0.3")
+	//client := graphql.NewClient("https://api.studio.thegraph.com/query/41778/etherfi-mainnet/0.0.3")
+	client := graphql.NewClient(gqlUrl)
 
 	// make a request
 	req := graphql.NewRequest(`
@@ -70,7 +77,8 @@ func query_gql() (string, bool) {
 		for _, bid := range bids.([]interface{}) {
 			bidMap := bid.(map[string]interface{})
 			if idValue, ok := bidMap["id"]; ok {
-				path := fmt.Sprintf("/Users/hwangseungkon/dsrv/2022/etherfi/sync-client-v2/etherfi-sync-clientv2/mnt/etherfi/sync_client_validator_keys/%s", idValue.(string))
+				//path := fmt.Sprintf("/Users/hwangseungkon/dsrv/2022/etherfi/sync-client-v2/etherfi-sync-clientv2/mnt/etherfi/sync_client_validator_keys/%s", idValue.(string))
+				path := fmt.Sprintf("%s/%s", outPath, idValue.(string))
 				_, errDir := os.Stat(path)
 				if os.IsNotExist(errDir) {
 					retString += fmt.Sprintf("%s is new one\n", idValue.(string))
